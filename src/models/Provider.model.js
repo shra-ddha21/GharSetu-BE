@@ -1,0 +1,16 @@
+import mongoose from "mongoose";
+
+const providerSchema = new mongoose.Schema({
+  businessName: { type: String, required: true },
+  ownerName: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  phone: { type: String, required: true },
+  location: { type: String, required: true },
+  serviceType: { type: String, required: true },
+  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  role: { type: String, default: 'provider' },
+}, { timestamps: true });
+
+export const Provider = mongoose.model('Provider', providerSchema);
+
