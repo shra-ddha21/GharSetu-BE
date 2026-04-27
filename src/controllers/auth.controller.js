@@ -105,27 +105,33 @@ export const loginProvider = async (req, res) => {
 export const loginAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log(`Admin login attempt: ${email}`);
+
+    // Support both 'admin' and 'admin@gharsetu.com'
+    const targetEmail = email === 'admin' ? 'admin@gharsetu.com' : email;
     
-    // Seed admin if none exists
-    let admin = await Admin.findOne({ email });
-    if (!admin && email === 'admin@gharsetu.com' && password === 'admin') {
+    let admin = await Admin.findOne({ email: targetEmail });
+    
+    if (!admin && targetEmail === 'admin@gharsetu.com' && password === 'admin') {
+      console.log('Seeding admin account...');
       const hPassword = await bcrypt.hash(password, 10);
-      admin = await Admin.create({ email, password: hPassword });
+      admin = await Admin.create({ email: 'admin@gharsetu.com', password: hPassword, role: 'admin' });
     }
 
     if (!admin) {
-       res.status(404).json({ message: 'Admin not found' });
-       return;
+       return res.status(404).json({ message: 'Admin not found' });
     }
+
     const isMatch = await bcrypt.compare(password, admin.password);
     if (!isMatch) {
-       res.status(401).json({ message: 'Invalid credentials' });
-       return;
+       return res.status(401).json({ message: 'Invalid credentials' });
     }
+
     const token = generateToken(admin._id.toString(), 'admin');
     setTokenCookie(res, token);
-    res.json({ message: 'Login successful', token, admin: { id: admin._id, email, role: admin.role } });
+    res.json({ message: 'Login successful', token, admin: { id: admin._id, email: admin.email, role: admin.role } });
   } catch(error) {
+    console.error('Admin Login Error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
