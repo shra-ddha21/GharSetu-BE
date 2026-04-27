@@ -1,5 +1,15 @@
 import { Router } from 'express';
-import { registerUser, loginUser, registerProvider, loginProvider, loginAdmin, logout } from '../controllers/auth.controller.js';
+import {
+  registerUser,
+  loginUser,
+  registerProvider,
+  loginProvider,
+  loginAdmin,
+  logout,
+  forgotPassword,
+  verifyOtp,
+  resetPasswordHandler
+} from '../controllers/auth.controller.js';
 
 const router = Router();
 
@@ -12,5 +22,10 @@ router.post('/providers/register', registerProvider);
 router.post('/providers/login', loginProvider);
 router.post('/admin/login', loginAdmin);
 router.post('/logout', logout);
+
+// Forgot Password Flow (public — no auth middleware)
+router.post('/forgot-password', forgotPassword);
+router.post('/verify-otp', verifyOtp);
+router.post('/reset-password', resetPasswordHandler);
 
 export default router;
