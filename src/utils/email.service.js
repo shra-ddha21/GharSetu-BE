@@ -3,40 +3,53 @@ import nodemailer from 'nodemailer';
 let transporter = null;
 
 /**
- * Creates and caches an Ethereal test transporter.
- * In production, swap to real SMTP via .env variables.
+ * Creates and caches the email transporter.
+ * Uses Gmail SMTP if EMAIL_USER and EMAIL_PASS are set in .env,
+ * otherwise falls back to Ethereal (test/mock service).
  */
 const getTransporter = async () => {
   if (transporter) return transporter;
 
-  // Create Ethereal test account
-  const testAccount = await nodemailer.createTestAccount();
+  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    // ─── Real Gmail SMTP ───────────────────────────────────
+    transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+    console.log('[EMAIL] Using Gmail SMTP:', process.env.EMAIL_USER);
+  } else {
+    // ─── Ethereal Fallback (dev/testing) ───────────────────
+    const testAccount = await nodemailer.createTestAccount();
+    transporter = nodemailer.createTransport({
+      host: testAccount.smtp.host,
+      port: testAccount.smtp.port,
+      secure: testAccount.smtp.secure,
+      auth: {
+        user: testAccount.user,
+        pass: testAccount.pass,
+      },
+    });
+    console.log('[EMAIL] Using Ethereal test account:', testAccount.user);
+    console.log('[EMAIL] ⚠️  Emails will NOT reach real inboxes. Set EMAIL_USER and EMAIL_PASS in .env for Gmail.');
+  }
 
-  transporter = nodemailer.createTransport({
-    host: testAccount.smtp.host,
-    port: testAccount.smtp.port,
-    secure: testAccount.smtp.secure,
-    auth: {
-      user: testAccount.user,
-      pass: testAccount.pass,
-    },
-  });
-
-  console.log('[EMAIL] Ethereal test account created:', testAccount.user);
   return transporter;
 };
 
 /**
- * Sends a 4-digit OTP email using Ethereal (dev) or real SMTP (prod).
+ * Sends a 4-digit OTP email to the specified address.
  * @param {string} toEmail - Recipient email address
  * @param {string} otp - 4-digit OTP string
- * @returns {string} Ethereal preview URL (dev only)
+ * @returns {string|null} Ethereal preview URL (only in dev/Ethereal mode)
  */
 export const sendOtpEmail = async (toEmail, otp) => {
   const transport = await getTransporter();
 
   const mailOptions = {
-    from: '"GharSetu" <noreply@gharsetu.com>',
+    from: `"GharSetu" <${process.env.EMAIL_USER || 'noreply@gharsetu.com'}>`,
     to: toEmail,
     subject: 'GharSetu - Password Reset OTP',
     html: `
@@ -52,10 +65,16 @@ export const sendOtpEmail = async (toEmail, otp) => {
   };
 
   const info = await transport.sendMail(mailOptions);
-  const previewUrl = nodemailer.getTestMessageUrl(info);
 
   console.log(`[DEV] OTP for ${toEmail}: ${otp}`);
-  console.log(`[DEV] Email preview: ${previewUrl}`);
 
-  return previewUrl;
+  // Ethereal provides a preview URL; Gmail does not
+  const previewUrl = nodemailer.getTestMessageUrl(info);
+  if (previewUrl) {
+    console.log(`[DEV] Email preview: ${previewUrl}`);
+  } else {
+    console.log(`[EMAIL] ✅ OTP email sent to ${toEmail}`);
+  }
+
+  return previewUrl || null;
 };
