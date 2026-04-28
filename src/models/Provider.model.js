@@ -10,6 +10,8 @@ const providerSchema = new mongoose.Schema({
   serviceType: { type: String, required: true },
   status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
   role: { type: String, default: 'provider' },
+  resetOtp: { type: String, default: null },
+  resetOtpExpiry: { type: Date, default: null },
 }, { timestamps: true });
 
 export const Provider = mongoose.model('Provider', providerSchema);

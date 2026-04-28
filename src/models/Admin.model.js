@@ -4,6 +4,8 @@ const adminSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, default: 'admin' },
+  resetOtp: { type: String, default: null },
+  resetOtpExpiry: { type: Date, default: null },
 }, { timestamps: true });
 
 export const Admin = mongoose.model('Admin', adminSchema);
