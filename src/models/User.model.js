@@ -5,6 +5,12 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, default: 'user' },
+  phone: { type: String, default: '' },
+  address: { type: String, default: '' },
+  profileImage: {
+    url: String,
+    publicId: String
+  },
   resetOtp: { type: String, default: null },
   resetOtpExpiry: { type: Date, default: null },
 }, { timestamps: true });

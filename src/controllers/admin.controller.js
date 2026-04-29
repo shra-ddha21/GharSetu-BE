@@ -1,12 +1,13 @@
-import { Provider, Request as RequestModel, ProviderResponse, Meeting } from '../models/index.js';
+import { Provider, Request as RequestModel, ProviderResponse, Meeting, User, Admin } from '../models/index.js';
 import mongoose from 'mongoose';
+import cloudinary from '../utils/cloudinary.js';
 
 // --- Provider Management ---
 export const getProviders = async (req, res) => {
   try {
     const status = req.query.status;
     const filter = status ? { status } : {};
-    const providers = await Provider.find(filter).select('-password');
+    const providers = await Provider.find(filter).select('-password').sort({ createdAt: -1 });
     res.json(providers);
   } catch (error) {
     console.error("getProviders error:", error);
@@ -162,6 +163,80 @@ export const reassignRequest = async (req, res) => {
 
     res.json({ message: 'Request reassigned successfully', request });
   } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const getAdminStats = async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments({ role: 'user' });
+    const totalProviders = await Provider.countDocuments();
+    const totalRequests = await RequestModel.countDocuments();
+
+    res.json({
+      totalUsers,
+      totalProviders,
+      totalRequests
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// --- Admin Profile Management ---
+
+export const getAdminProfile = async (req, res) => {
+  try {
+    const admin = await Admin.findById(req.user.userId).select('-password -resetOtp -resetOtpExpiry');
+    if (!admin) return res.status(404).json({ message: 'Admin not found' });
+    res.json(admin);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const updateAdminProfile = async (req, res) => {
+  try {
+    const { name, phone, address } = req.body;
+    const admin = await Admin.findByIdAndUpdate(
+      req.user.userId,
+      { name, phone, address },
+      { new: true, runValidators: true }
+    ).select('-password -resetOtp -resetOtpExpiry');
+    
+    if (!admin) return res.status(404).json({ message: 'Admin not found' });
+    res.json(admin);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const uploadAdminProfileImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No image provided' });
+    }
+
+    const admin = await Admin.findById(req.user.userId);
+    if (!admin) return res.status(404).json({ message: 'Admin not found' });
+
+    if (admin.profileImage && admin.profileImage.publicId) {
+      try {
+        await cloudinary.uploader.destroy(admin.profileImage.publicId);
+      } catch (err) {
+        console.error('Failed to delete old profile image:', err);
+      }
+    }
+
+    admin.profileImage = {
+      url: req.file.path,
+      publicId: req.file.filename
+    };
+
+    await admin.save();
+    res.json(admin.profileImage);
+  } catch (error) {
+    console.error('Admin profile image upload error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
