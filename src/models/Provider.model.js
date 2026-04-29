@@ -8,6 +8,17 @@ const providerSchema = new mongoose.Schema({
   phone: { type: String, required: true },
   location: { type: String, required: true },
   serviceType: { type: String, required: true },
+  servicesOffered: [{ type: String }],
+  experience: { type: Number },
+  description: { type: String },
+  portfolioImages: [{
+    url: String,
+    publicId: String
+  }],
+  coordinates: {
+    lat: { type: Number, default: null },
+    lng: { type: Number, default: null }
+  },
   status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
   role: { type: String, default: 'provider' },
   resetOtp: { type: String, default: null },
