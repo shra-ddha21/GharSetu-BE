@@ -1,15 +1,49 @@
-import { Provider, Request as RequestModel, Meeting } from '../models/index.js';
+import { Provider, Request as RequestModel, Meeting, User } from '../models/index.js';
+import cloudinary from '../utils/cloudinary.js';
 
 export const searchProviders = async (req, res) => {
   try {
-    const { serviceType, location } = req.query;
+    const { keyword, category, location, minExperience } = req.query;
     const query = { status: 'approved' };
-    if (serviceType) query.serviceType = { $regex: new RegExp(serviceType, 'i') };
-    if (location) query.location = { $regex: new RegExp(location, 'i') };
     
-    const providers = await Provider.find(query).select('-password');
+    // 1. Keyword search (across multiple text fields)
+    if (keyword) {
+      const keywordRegex = new RegExp(keyword, 'i');
+      query.$or = [
+        { businessName: keywordRegex },
+        { ownerName: keywordRegex },
+        { serviceType: keywordRegex },
+        { servicesOffered: keywordRegex },
+        { description: keywordRegex }
+      ];
+    }
+
+    // 2. Category specific match
+    if (category) {
+      const categoryRegex = new RegExp(category, 'i');
+      // If $or already exists (from keyword), we use $and to ensure both conditions are met
+      const categoryCondition = { $or: [{ serviceType: categoryRegex }, { servicesOffered: categoryRegex }] };
+      if (query.$or) {
+        query.$and = [categoryCondition];
+      } else {
+        query.$or = categoryCondition.$or;
+      }
+    }
+
+    // 3. Location match
+    if (location) {
+      query.location = { $regex: new RegExp(location, 'i') };
+    }
+
+    // 4. Minimum Experience filter
+    if (minExperience && !isNaN(minExperience) && Number(minExperience) > 0) {
+      query.experience = { $gte: Number(minExperience) };
+    }
+    
+    const providers = await Provider.find(query).select('-password').sort('-createdAt');
     res.json(providers);
   } catch (error) {
+    console.error('Search error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -71,6 +105,65 @@ export const getMyRequests = async (req, res) => {
 
     res.json(requestsWithMeetings);
   } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// --- Profile Management ---
+
+export const getUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).select('-password -resetOtp -resetOtpExpiry');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const updateUserProfile = async (req, res) => {
+  try {
+    const { name, phone, address } = req.body;
+    const user = await User.findByIdAndUpdate(
+      req.user.userId,
+      { name, phone, address },
+      { new: true, runValidators: true }
+    ).select('-password -resetOtp -resetOtpExpiry');
+    
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const uploadUserProfileImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No image provided' });
+    }
+
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Optional: Delete old profile image from cloudinary if it exists
+    if (user.profileImage && user.profileImage.publicId) {
+      try {
+        await cloudinary.uploader.destroy(user.profileImage.publicId);
+      } catch (err) {
+        console.error('Failed to delete old profile image:', err);
+      }
+    }
+
+    user.profileImage = {
+      url: req.file.path,
+      publicId: req.file.filename
+    };
+
+    await user.save();
+    res.json(user.profileImage);
+  } catch (error) {
+    console.error('Profile image upload error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

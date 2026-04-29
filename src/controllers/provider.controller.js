@@ -1,5 +1,6 @@
 import { ProviderResponse, Request as RequestModel, Meeting } from '../models/index.js';
 import mongoose from 'mongoose';
+import * as providerService from '../services/provider.service.js';
 
 export const getIncomingRequests = async (req, res) => {
   try {
@@ -95,5 +96,48 @@ export const respondToRequest = async (req, res) => {
     res.json({ message: 'Successfully assigned to this request.' });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Profile Management
+
+export const getProfile = async (req, res, next) => {
+  try {
+    const providerId = req.user.userId;
+    const profile = await providerService.getProviderProfile(providerId);
+    res.json({ success: true, data: profile, message: 'Profile fetched successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateProfile = async (req, res, next) => {
+  try {
+    const providerId = req.user.userId;
+    const profile = await providerService.updateProviderProfile(providerId, req.body);
+    res.json({ success: true, data: profile, message: 'Profile updated successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const uploadPortfolio = async (req, res, next) => {
+  try {
+    const providerId = req.user.userId;
+    const images = await providerService.uploadPortfolioImages(providerId, req.files);
+    res.json({ success: true, data: images, message: 'Images uploaded successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deletePortfolioImage = async (req, res, next) => {
+  try {
+    const providerId = req.user.userId;
+    const { publicId } = req.params;
+    const images = await providerService.deletePortfolioImage(providerId, publicId);
+    res.json({ success: true, data: images, message: 'Image deleted successfully' });
+  } catch (error) {
+    next(error);
   }
 };
