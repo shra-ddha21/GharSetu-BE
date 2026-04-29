@@ -1,10 +1,11 @@
 import { Router } from 'express';
-import { getProviders, approveProvider, rejectProvider, getAllRequests, sendRequestToProviders, scheduleMeeting, completeRequest, reassignRequest } from '../controllers/admin.controller.js';
+import { getProviders, approveProvider, rejectProvider, getAllRequests, sendRequestToProviders, scheduleMeeting, completeRequest, reassignRequest, getAdminStats } from '../controllers/admin.controller.js';
 import { authMiddleware } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 router.use(authMiddleware(['admin']));
 
+router.get('/stats', getAdminStats);
 router.get('/providers', getProviders);
 router.patch('/providers/:id/approve', approveProvider);
 router.patch('/providers/:id/reject', rejectProvider);
