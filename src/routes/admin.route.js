@@ -21,6 +21,5 @@ router.post('/requests/:id/reassign', reassignRequest);
 router.get('/profile', getAdminProfile);
 router.put('/profile', updateAdminProfile);
 router.post('/profile/image', upload.single('image'), uploadAdminProfileImage);
-router.get('/stats', getAdminStats);
 
 export default router;

@@ -22,11 +22,15 @@ export const getAdminStats = async (req, res) => {
     const activeRequests = await RequestModel.countDocuments({ 
       status: { $in: ['pending', 'in-progress', 'assigned', 'meeting-scheduled'] } 
     });
+    const totalProviders = await Provider.countDocuments();
+    const totalRequests = await RequestModel.countDocuments();
 
     res.json({
       totalUsers,
       pendingProviders,
-      activeRequests
+      activeRequests,
+      totalProviders,
+      totalRequests
     });
   } catch (error) {
     console.error("getAdminStats error:", error);
@@ -186,21 +190,7 @@ export const reassignRequest = async (req, res) => {
   }
 };
 
-export const getAdminStats = async (req, res) => {
-  try {
-    const totalUsers = await User.countDocuments({ role: 'user' });
-    const totalProviders = await Provider.countDocuments();
-    const totalRequests = await RequestModel.countDocuments();
 
-    res.json({
-      totalUsers,
-      totalProviders,
-      totalRequests
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error' });
-  }
-};
 
 // --- Admin Profile Management ---
 
