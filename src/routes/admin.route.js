@@ -6,6 +6,7 @@ import { authMiddleware } from '../middlewares/auth.middleware.js';
 const router = Router();
 router.use(authMiddleware(['admin']));
 
+router.get('/stats', getAdminStats);
 router.get('/providers', getProviders);
 router.patch('/providers/:id/approve', approveProvider);
 router.patch('/providers/:id/reject', rejectProvider);

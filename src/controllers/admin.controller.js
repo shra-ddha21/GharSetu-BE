@@ -15,6 +15,25 @@ export const getProviders = async (req, res) => {
   }
 };
 
+export const getAdminStats = async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments();
+    const pendingProviders = await Provider.countDocuments({ status: 'pending' });
+    const activeRequests = await RequestModel.countDocuments({ 
+      status: { $in: ['pending', 'in-progress', 'assigned', 'meeting-scheduled'] } 
+    });
+
+    res.json({
+      totalUsers,
+      pendingProviders,
+      activeRequests
+    });
+  } catch (error) {
+    console.error("getAdminStats error:", error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 export const approveProvider = async (req, res) => {
   try {
     const { id } = req.params;
