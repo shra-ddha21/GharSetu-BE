@@ -1,5 +1,6 @@
-import { Provider, Request as RequestModel, Meeting, User } from '../models/index.js';
+import { Provider, Request as RequestModel, Meeting, User, Admin } from '../models/index.js';
 import cloudinary from '../utils/cloudinary.js';
+import { sendUserRequestAdminEmail } from '../utils/email.service.js';
 
 export const searchProviders = async (req, res) => {
   try {
@@ -79,6 +80,16 @@ export const createRequest = async (req, res) => {
       preferredDate,
       selectedProviders: providerIds
     });
+
+    const admin = await Admin.findOne({});
+    if (admin) {
+      await sendUserRequestAdminEmail(admin.email, {
+        userName: req.user.name || 'A user',
+        requirement,
+        preferredDate: new Date(preferredDate).toLocaleDateString(),
+        providerCount: providerIds.length
+      });
+    }
 
     res.status(201).json({ message: 'Request created successfully', request });
   } catch (error) {

@@ -1,6 +1,12 @@
 import { Provider, Request as RequestModel, ProviderResponse, Meeting, User, Admin } from '../models/index.js';
 import mongoose from 'mongoose';
 import cloudinary from '../utils/cloudinary.js';
+import { 
+  sendProviderApprovalEmail, 
+  sendProviderRejectionEmail, 
+  sendRequestForwardedProviderEmail, 
+  sendMeetingScheduledEmail 
+} from '../utils/email.service.js';
 
 // --- Provider Management ---
 export const getProviders = async (req, res) => {
@@ -43,6 +49,9 @@ export const approveProvider = async (req, res) => {
     const { id } = req.params;
     const provider = await Provider.findByIdAndUpdate(id, { status: 'approved' }, { new: true }).select('-password');
     if (!provider) { res.status(404).json({ message: 'Provider not found' }); return; }
+    
+    await sendProviderApprovalEmail(provider.email, provider.ownerName);
+    
     res.json({ message: 'Provider approved', provider });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -52,8 +61,12 @@ export const approveProvider = async (req, res) => {
 export const rejectProvider = async (req, res) => {
   try {
     const { id } = req.params;
+    const { reason } = req.body;
     const provider = await Provider.findByIdAndUpdate(id, { status: 'rejected' }, { new: true }).select('-password');
     if (!provider) { res.status(404).json({ message: 'Provider not found' }); return; }
+    
+    await sendProviderRejectionEmail(provider.email, provider.ownerName, reason);
+    
     res.json({ message: 'Provider rejected', provider });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -101,6 +114,17 @@ export const sendRequestToProviders = async (req, res) => {
     request.status = 'in-progress';
     await request.save();
 
+    // Send emails to selected providers
+    for (const pId of request.selectedProviders) {
+      const p = await Provider.findById(pId);
+      if (p) {
+        await sendRequestForwardedProviderEmail(p.email, {
+          requirement: request.requirement,
+          preferredDate: new Date(request.preferredDate).toLocaleDateString()
+        });
+      }
+    }
+
     res.json({ message: 'Request sent to selected providers successfully', request });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -121,6 +145,25 @@ export const scheduleMeeting = async (req, res) => {
      const meeting = await Meeting.create({ requestId: request._id, date, link });
      request.status = 'meeting-scheduled';
      await request.save();
+
+     // Fetch User and Assigned Provider to send email
+     const [user, provider] = await Promise.all([
+       User.findById(request.userId),
+       Provider.findById(request.assignedProviderId)
+     ]);
+
+     if (user && provider) {
+       const meetingData = {
+         scheduledAt: date,
+         meetingLink: link,
+         serviceType: request.requirement,
+         userName: user.name,
+         providerName: provider.businessName
+       };
+       
+       await sendMeetingScheduledEmail(user.email, user.name, meetingData, false);
+       await sendMeetingScheduledEmail(provider.email, provider.businessName, meetingData, true);
+     }
 
      res.json({ message: 'Meeting scheduled successfully', meeting, request });
    } catch (error) {
