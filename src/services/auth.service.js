@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { User, Provider, Admin } from '../models/index.js';
 import CustomError from '../utils/custom.error.js';
-import { sendOtpEmail } from '../utils/email.service.js';
+import { sendOtpEmail, sendProviderRegistrationAdminEmail } from '../utils/email.service.js';
 
 // ─── Existing helper ───────────────────────────────────────────
 const signToken = (id, role) => {
@@ -40,6 +40,13 @@ export const registerProvider = async (providerData) => {
     password: hashedPassword,
     status: 'pending'
   });
+  
+  // Find Admin email
+  const admin = await Admin.findOne({});
+  if (admin) {
+    await sendProviderRegistrationAdminEmail(admin.email, newProvider);
+  }
+
   newProvider.password = undefined;
   // Admin approval required, so no token returned on registration
   return { provider: newProvider };
@@ -121,9 +128,9 @@ export const forgotPassword = async (email) => {
   // Generate 4-digit OTP (1000–9999)
   const otp = Math.floor(1000 + Math.random() * 9000).toString();
 
-  // Save OTP with 30-second expiry
+  // Save OTP with 60-second (1 minute) expiry
   account.resetOtp = otp;
-  account.resetOtpExpiry = new Date(Date.now() + 30 * 1000);
+  account.resetOtpExpiry = new Date(Date.now() + 60 * 1000);
   await account.save();
 
   // Send OTP via email

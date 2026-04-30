@@ -1,6 +1,7 @@
-import { ProviderResponse, Request as RequestModel, Meeting } from '../models/index.js';
+import { ProviderResponse, Request as RequestModel, Meeting, User, Admin, Provider } from '../models/index.js';
 import mongoose from 'mongoose';
 import * as providerService from '../services/provider.service.js';
+import { sendProviderResponseEmail } from '../utils/email.service.js';
 
 export const getIncomingRequests = async (req, res) => {
   try {
@@ -66,6 +67,17 @@ export const respondToRequest = async (req, res) => {
     if (action === 'reject') {
       providerResponse.status = 'rejected';
       await providerResponse.save();
+      
+      // Fetch details for email
+      const reqDoc = await RequestModel.findById(id).populate('userId', 'name email');
+      const provider = await Provider.findById(providerId);
+      const admin = await Admin.findOne({});
+      
+      if (reqDoc && provider && reqDoc.userId) {
+        await sendProviderResponseEmail(reqDoc.userId.email, reqDoc.userId.name, provider.businessName, 'reject', true);
+        if (admin) await sendProviderResponseEmail(admin.email, 'Admin', provider.businessName, 'reject', false);
+      }
+
       res.json({ message: 'Request rejected successfully' });
       return;
     }
@@ -92,6 +104,16 @@ export const respondToRequest = async (req, res) => {
       { requestId: request._id, providerId: { $ne: providerId }, status: 'pending' },
       { status: 'not-selected' }
     );
+
+    // Fetch details for email
+    const userDoc = await User.findById(request.userId);
+    const provider = await Provider.findById(providerId);
+    const admin = await Admin.findOne({});
+    
+    if (userDoc && provider) {
+      await sendProviderResponseEmail(userDoc.email, userDoc.name, provider.businessName, 'accept', true);
+      if (admin) await sendProviderResponseEmail(admin.email, 'Admin', provider.businessName, 'accept', false);
+    }
 
     res.json({ message: 'Successfully assigned to this request.' });
   } catch (error) {

@@ -6,6 +6,7 @@ import {
   verifyOtp as verifyOtpService,
   resetPassword as resetPasswordService
 } from '../services/auth.service.js';
+import { sendProviderRegistrationAdminEmail } from '../utils/email.service.js';
 
 const setTokenCookie = (res, token) => {
   res.cookie('token', token, {
@@ -76,6 +77,11 @@ export const registerProvider = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const provider = await Provider.create({ businessName, ownerName, email, password: hashedPassword, phone, location, serviceType });
 
+    const admin = await Admin.findOne({});
+    if (admin) {
+      await sendProviderRegistrationAdminEmail(admin.email, provider);
+    }
+
     res.status(201).json({ message: 'Provider registered successfully. Waiting for admin approval.', provider: { id: provider._id, email } });
   } catch(error) {
     res.status(500).json({ message: 'Server error' });
@@ -116,15 +122,15 @@ export const loginAdmin = async (req, res) => {
     const { email, password } = req.body;
     console.log(`Admin login attempt: ${email}`);
 
-    // Support both 'admin' and 'admin@gharsetu.com'
-    const targetEmail = email === 'admin' ? 'admin@gharsetu.com' : email;
+    // Support both 'admin' and 'gharsetu03@gmail.com'
+    const targetEmail = email === 'admin' ? 'gharsetu03@gmail.com' : email;
     
     let admin = await Admin.findOne({ email: targetEmail });
     
-    if (!admin && targetEmail === 'admin@gharsetu.com' && password === 'admin') {
+    if (!admin && targetEmail === 'gharsetu03@gmail.com' && password === 'admin') {
       console.log('Seeding admin account...');
       const hPassword = await bcrypt.hash(password, 10);
-      admin = await Admin.create({ email: 'admin@gharsetu.com', password: hPassword, role: 'admin' });
+      admin = await Admin.create({ email: 'gharsetu03@gmail.com', password: hPassword, role: 'admin' });
     }
 
     if (!admin) {
