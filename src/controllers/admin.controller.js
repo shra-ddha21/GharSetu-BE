@@ -60,6 +60,28 @@ export const rejectProvider = async (req, res) => {
   }
 };
 
+export const deactivateProvider = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const provider = await Provider.findByIdAndUpdate(id, { status: 'deactivated' }, { new: true }).select('-password');
+    if (!provider) { res.status(404).json({ message: 'Provider not found' }); return; }
+    res.json({ message: 'Provider deactivated successfully', provider });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const reactivateProvider = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const provider = await Provider.findByIdAndUpdate(id, { status: 'approved' }, { new: true }).select('-password');
+    if (!provider) { res.status(404).json({ message: 'Provider not found' }); return; }
+    res.json({ message: 'Provider reactivated successfully', provider });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // --- Request Management ---
 
 export const getAllRequests = async (req, res) => {
