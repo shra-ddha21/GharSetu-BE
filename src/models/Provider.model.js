@@ -19,7 +19,7 @@ const providerSchema = new mongoose.Schema({
     lat: { type: Number, default: null },
     lng: { type: Number, default: null }
   },
-  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  status: { type: String, enum: ['pending', 'approved', 'rejected', 'deactivated'], default: 'pending' },
   role: { type: String, default: 'provider' },
   resetOtp: { type: String, default: null },
   resetOtpExpiry: { type: Date, default: null },

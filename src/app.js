@@ -18,6 +18,7 @@ import authRoutes from './routes/auth.route.js';
 import userRoutes from './routes/user.route.js';
 import providerRoutes from './routes/provider.route.js';
 import adminRoutes from './routes/admin.route.js';
+import contactRoutes from './routes/contact.route.js';
 import errorMiddleware from './middlewares/error.middleware.js';
 
 // Basic route
@@ -30,6 +31,7 @@ app.use('/api', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/providers', providerRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/contact', contactRoutes);
 
 // Error Middleware
 app.use(errorMiddleware);

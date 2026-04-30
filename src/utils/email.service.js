@@ -78,3 +78,61 @@ export const sendOtpEmail = async (toEmail, otp) => {
 
   return previewUrl || null;
 };
+
+/**
+ * Sends a contact us email to the admin.
+ * @param {string} name - Sender name
+ * @param {string} email - Sender email
+ * @param {string} subject - Subject of the message
+ * @param {string} message - The message content
+ */
+export const sendContactEmail = async (name, email, subject, message) => {
+  const transport = await getTransporter();
+
+  // If no EMAIL_USER is configured, default to a fallback for testing
+  const adminEmail = process.env.EMAIL_USER || 'admin@gharsetu.com';
+
+  const mailOptions = {
+    from: `"GharSetu Website" <${process.env.EMAIL_USER || 'noreply@gharsetu.com'}>`,
+    to: adminEmail,
+    replyTo: email,
+    subject: `New Contact Message: ${subject}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px; background: #f8fafc; border-radius: 16px;">
+        <h2 style="color: #1e293b; margin-bottom: 24px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">New Contact Us Message</h2>
+        
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+          <tr>
+            <td style="padding: 8px 0; color: #64748b; width: 100px; font-weight: bold;">Name:</td>
+            <td style="padding: 8px 0; color: #1e293b;">${name}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #64748b; font-weight: bold;">Email:</td>
+            <td style="padding: 8px 0; color: #1e293b;"><a href="mailto:${email}" style="color: #4f46e5; text-decoration: none;">${email}</a></td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #64748b; font-weight: bold;">Subject:</td>
+            <td style="padding: 8px 0; color: #1e293b;">${subject}</td>
+          </tr>
+        </table>
+        
+        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; color: #334155; line-height: 1.6; white-space: pre-wrap;">
+          ${message}
+        </div>
+        
+        <p style="color: #94a3b8; font-size: 12px; margin-top: 32px; text-align: center;">This message was sent from the GharSetu Contact Us page.</p>
+      </div>
+    `,
+  };
+
+  const info = await transport.sendMail(mailOptions);
+
+  console.log(`[DEV] Contact message from ${email} sent to admin.`);
+
+  const previewUrl = nodemailer.getTestMessageUrl(info);
+  if (previewUrl) {
+    console.log(`[DEV] Contact email preview: ${previewUrl}`);
+  }
+
+  return previewUrl || null;
+};

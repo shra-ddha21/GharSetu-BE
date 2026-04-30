@@ -17,7 +17,7 @@ export const getProviders = async (req, res) => {
 
 export const getAdminStats = async (req, res) => {
   try {
-    const totalUsers = await User.countDocuments();
+    const totalUsers = await User.countDocuments({ role: 'user' });
     const pendingProviders = await Provider.countDocuments({ status: 'pending' });
     const activeRequests = await RequestModel.countDocuments({ 
       status: { $in: ['pending', 'in-progress', 'assigned', 'meeting-scheduled'] } 
@@ -55,6 +55,28 @@ export const rejectProvider = async (req, res) => {
     const provider = await Provider.findByIdAndUpdate(id, { status: 'rejected' }, { new: true }).select('-password');
     if (!provider) { res.status(404).json({ message: 'Provider not found' }); return; }
     res.json({ message: 'Provider rejected', provider });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const deactivateProvider = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const provider = await Provider.findByIdAndUpdate(id, { status: 'deactivated' }, { new: true }).select('-password');
+    if (!provider) { res.status(404).json({ message: 'Provider not found' }); return; }
+    res.json({ message: 'Provider deactivated successfully', provider });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const reactivateProvider = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const provider = await Provider.findByIdAndUpdate(id, { status: 'approved' }, { new: true }).select('-password');
+    if (!provider) { res.status(404).json({ message: 'Provider not found' }); return; }
+    res.json({ message: 'Provider reactivated successfully', provider });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }

@@ -90,6 +90,10 @@ export const loginProvider = async (req, res) => {
        res.status(404).json({ message: 'Provider not found' });
        return;
     }
+    if (provider.status === 'deactivated') {
+       res.status(403).json({ message: 'Your account has been deactivated by the admin. Please contact support.' });
+       return;
+    }
     if (provider.status !== 'approved') {
        res.status(403).json({ message: 'Your account is pending or rejected.' });
        return;
