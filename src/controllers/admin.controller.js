@@ -23,26 +23,42 @@ export const getProviders = async (req, res) => {
 
 export const getAdminStats = async (req, res) => {
   try {
-    const totalUsers = await User.countDocuments({ role: 'user' });
-    const pendingProviders = await Provider.countDocuments({ status: 'pending' });
-    const activeRequests = await RequestModel.countDocuments({ 
-      status: { $in: ['pending', 'in-progress', 'assigned', 'meeting-scheduled'] } 
-    });
-    const totalProviders = await Provider.countDocuments();
-    const totalRequests = await RequestModel.countDocuments();
+    const [
+      totalUsers,
+      pendingProviders,
+      approvedProviders,
+      totalProviders,
+      totalRequests,
+      activeRequests,
+      completedRequests,
+      recentPendingProviders
+    ] = await Promise.all([
+      User.countDocuments({ role: 'user' }),
+      Provider.countDocuments({ status: 'pending' }),
+      Provider.countDocuments({ status: 'approved' }),
+      Provider.countDocuments(),
+      RequestModel.countDocuments(),
+      RequestModel.countDocuments({ status: { $in: ['pending', 'in-progress', 'assigned', 'meeting-scheduled'] } }),
+      RequestModel.countDocuments({ status: 'completed' }),
+      Provider.find({ status: 'pending' }).select('businessName ownerName serviceType createdAt email').sort({ createdAt: -1 }).limit(5)
+    ]);
 
     res.json({
       totalUsers,
       pendingProviders,
+      approvedProviders,
       activeRequests,
       totalProviders,
-      totalRequests
+      totalRequests,
+      completedRequests,
+      recentPendingProviders
     });
   } catch (error) {
     console.error("getAdminStats error:", error);
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 export const approveProvider = async (req, res) => {
   try {

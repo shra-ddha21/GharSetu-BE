@@ -163,3 +163,36 @@ export const deletePortfolioImage = async (req, res, next) => {
     next(error);
   }
 };
+
+export const uploadDocuments = async (req, res, next) => {
+  try {
+    const providerId = req.user.userId;
+    // req.files will be an object with multiple fields if configured in multer
+    const result = await providerService.uploadProfileDocuments(providerId, req.files);
+    res.json({ success: true, data: result, message: 'Documents uploaded successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const sendPhoneOtp = async (req, res, next) => {
+  try {
+    const providerId = req.user.userId;
+    const { phone } = req.body;
+    const result = await providerService.sendProviderPhoneOtp(providerId, phone);
+    res.json({ success: true, message: result.message });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const verifyPhoneOtp = async (req, res, next) => {
+  try {
+    const providerId = req.user.userId;
+    const { otp } = req.body;
+    const result = await providerService.verifyProviderPhoneOtp(providerId, otp);
+    res.json({ success: true, data: result, message: result.message });
+  } catch (error) {
+    next(error);
+  }
+};

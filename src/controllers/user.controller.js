@@ -4,44 +4,61 @@ import { sendUserRequestAdminEmail } from '../utils/email.service.js';
 
 export const searchProviders = async (req, res) => {
   try {
-    const { keyword, category, location, minExperience } = req.query;
-    const query = { status: 'approved' };
+    const { keyword, category, state, district, city, minExperience } = req.query;
+    const conditions = [{ status: 'approved' }];
     
     // 1. Keyword search (across multiple text fields)
     if (keyword) {
-      const keywordRegex = new RegExp(keyword, 'i');
-      query.$or = [
-        { businessName: keywordRegex },
-        { ownerName: keywordRegex },
-        { serviceType: keywordRegex },
-        { servicesOffered: keywordRegex },
-        { description: keywordRegex }
-      ];
+      const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const keywordRegex = new RegExp(escapedKeyword, 'i');
+      conditions.push({
+        $or: [
+          { businessName: keywordRegex },
+          { ownerName: keywordRegex },
+          { serviceType: keywordRegex },
+          { servicesOffered: keywordRegex },
+          { description: keywordRegex }
+        ]
+      });
     }
 
     // 2. Category specific match
     if (category) {
-      const categoryRegex = new RegExp(category, 'i');
-      // If $or already exists (from keyword), we use $and to ensure both conditions are met
-      const categoryCondition = { $or: [{ serviceType: categoryRegex }, { servicesOffered: categoryRegex }] };
-      if (query.$or) {
-        query.$and = [categoryCondition];
-      } else {
-        query.$or = categoryCondition.$or;
-      }
+      // Escape special regex characters in the category string
+      const escapedCategory = category.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const categoryRegex = new RegExp(`^${escapedCategory}$`, 'i');
+      conditions.push({
+        $or: [
+          { serviceType: categoryRegex },
+          { servicesOffered: categoryRegex }
+        ]
+      });
     }
 
-    // 3. Location match
-    if (location) {
-      query.location = { $regex: new RegExp(location, 'i') };
+    // 3. Location match (State, District, City)
+    if (state) {
+      const escapedState = state.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      conditions.push({ 'address.state': { $regex: new RegExp(escapedState, 'i') } });
+    }
+    if (district) {
+      const escapedDistrict = district.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      conditions.push({ 'address.district': { $regex: new RegExp(escapedDistrict, 'i') } });
+    }
+    if (city) {
+      const escapedCity = city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      conditions.push({ 'address.city': { $regex: new RegExp(escapedCity, 'i') } });
     }
 
     // 4. Minimum Experience filter
     if (minExperience && !isNaN(minExperience) && Number(minExperience) > 0) {
-      query.experience = { $gte: Number(minExperience) };
+      conditions.push({ experience: { $gte: Number(minExperience) } });
     }
     
-    const providers = await Provider.find(query).select('-password').sort('-createdAt');
+    const query = conditions.length > 1 ? { $and: conditions } : conditions[0];
+    
+    const providers = await Provider.find(query)
+      .select('-password')
+      .sort({ isVerifiedProfile: -1, createdAt: -1 });
     res.json(providers);
   } catch (error) {
     console.error('Search error:', error);

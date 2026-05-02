@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getProviders, approveProvider, rejectProvider, deactivateProvider, reactivateProvider, getAllRequests, sendRequestToProviders, scheduleMeeting, completeRequest, reassignRequest, getAdminStats, getAdminProfile, updateAdminProfile, uploadAdminProfileImage } from '../controllers/admin.controller.js';
+import { createCategory, updateCategory, deleteCategory } from '../controllers/service.controller.js';
 import { upload } from '../utils/cloudinary.js';
 import { authMiddleware } from '../middlewares/auth.middleware.js';
 
@@ -24,4 +25,9 @@ router.get('/profile', getAdminProfile);
 router.put('/profile', updateAdminProfile);
 router.post('/profile/image', upload.single('image'), uploadAdminProfileImage);
 
-export default router;
+// Service Category Management (Admin only)
+router.post('/services/categories', createCategory);
+router.put('/services/categories/:id', updateCategory);
+router.delete('/services/categories/:id', deleteCategory);
+
+export default router;
