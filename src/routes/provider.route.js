@@ -18,7 +18,7 @@ router.post('/requests/:id/respond', respondToRequest);
 router.get('/profile', getProfile);
 router.put('/profile', updateProfile);
 router.post('/profile/portfolio', upload.array('images', 10), uploadPortfolio);
-router.delete('/profile/portfolio/:publicId', deletePortfolioImage);
+router.delete('/profile/portfolio/:publicId(*)', deletePortfolioImage);
 
 // New Enhancements
 router.post('/profile/documents', upload.fields([
