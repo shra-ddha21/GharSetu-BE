@@ -81,6 +81,13 @@ export const createRequest = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { requirement, preferredDate, providerIds } = req.body;
+    
+    // Check if user profile is complete
+    const user = await User.findById(userId);
+    if (!user.phone || !user.address) {
+       res.status(403).json({ message: 'Please complete your profile (Phone & Address) before requesting services.' });
+       return;
+    }
 
     if (!requirement || !preferredDate || !providerIds || !Array.isArray(providerIds) || providerIds.length === 0) {
        res.status(400).json({ message: 'Requirement, preferredDate, and at least one provider must be specified.' });
@@ -152,9 +159,21 @@ export const getUserProfile = async (req, res) => {
 export const updateUserProfile = async (req, res) => {
   try {
     const { name, phone, address } = req.body;
+
+    // Sanitize phone number: Ensure it's not a concatenated mess
+    let sanitizedPhone = phone;
+    if (phone && phone.includes('+')) {
+      const localNumber = phone.slice(-10).replace(/\D/g, '');
+      if (localNumber.length === 10) {
+        // Correctly identify the prefix without over-eating digits
+        const prefix = phone.startsWith('+91') ? '+91' : (phone.match(/^\+\d{1,3}/)?.[0] || '+91');
+        sanitizedPhone = `${prefix}${localNumber}`;
+      }
+    }
+
     const user = await User.findByIdAndUpdate(
       req.user.userId,
-      { name, phone, address },
+      { name, phone: sanitizedPhone, address },
       { new: true, runValidators: true }
     ).select('-password -resetOtp -resetOtpExpiry');
     

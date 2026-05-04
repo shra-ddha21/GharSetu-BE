@@ -137,8 +137,17 @@ export const updateProviderProfile = async (providerId, updateData) => {
   if (email !== undefined) updatePayload.email = email;
   
   if (phone !== undefined) {
-    updatePayload.phone = phone;
-    if (phone !== existingProvider.phone) {
+    // Sanitize phone number
+    let sanitizedPhone = phone;
+    if (phone && phone.includes('+')) {
+      const localNumber = phone.slice(-10).replace(/\D/g, '');
+      if (localNumber.length === 10) {
+        const prefix = phone.startsWith('+91') ? '+91' : (phone.match(/^\+\d{1,3}/)?.[0] || '+91');
+        sanitizedPhone = `${prefix}${localNumber}`;
+      }
+    }
+    updatePayload.phone = sanitizedPhone;
+    if (sanitizedPhone !== existingProvider.phone) {
       updatePayload.phoneVerified = false;
     }
   }
@@ -279,24 +288,37 @@ export const sendProviderPhoneOtp = async (providerId, phone) => {
   if (!targetPhone) throw new CustomError('No phone number provided', 400);
 
   // If a new phone number is provided, update it and reset verification status
-  if (phone && phone !== provider.phone) {
-    provider.phone = phone;
-    provider.phoneVerified = false;
-    provider.isVerifiedProfile = false;
+  if (phone) {
+    // Sanitize phone number
+    let sanitizedPhone = phone;
+    if (phone.includes('+')) {
+      const localNumber = phone.slice(-10).replace(/\D/g, '');
+      if (localNumber.length === 10) {
+        const prefix = phone.startsWith('+91') ? '+91' : (phone.match(/^\+\d{1,3}/)?.[0] || '+91');
+        sanitizedPhone = `${prefix}${localNumber}`;
+      }
+    }
+
+    if (sanitizedPhone !== provider.phone) {
+      provider.phone = sanitizedPhone;
+      provider.phoneVerified = false;
+      provider.isVerifiedProfile = false;
+    }
+    // Update targetPhone for OTP delivery
+    const finalPhone = sanitizedPhone;
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    provider.phoneOtp = otp;
+    provider.phoneOtpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    await provider.save();
+
+    const { sendPhoneOtp } = await import('../utils/sms.service.js');
+    const isSent = await sendPhoneOtp(finalPhone, otp);
+    if (!isSent) {
+      throw new CustomError('Failed to send OTP via SMS', 500);
+    }
+
+    return { message: 'OTP sent successfully to ' + finalPhone };
   }
-
-  const otp = Math.floor(1000 + Math.random() * 9000).toString();
-  provider.phoneOtp = otp;
-  provider.phoneOtpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-  await provider.save();
-
-  const { sendPhoneOtp } = await import('../utils/sms.service.js');
-  const isSent = await sendPhoneOtp(targetPhone, otp);
-  if (!isSent) {
-    throw new CustomError('Failed to send OTP via SMS', 500);
-  }
-
-  return { message: 'OTP sent successfully to ' + targetPhone };
 };
 
 export const verifyProviderPhoneOtp = async (providerId, otp) => {
