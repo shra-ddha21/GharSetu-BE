@@ -19,9 +19,9 @@ const setTokenCookie = (res, token) => {
 
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
-    if (!name || !email || !password) {
-      res.status(400).json({ message: 'All fields are required' });
+    const { name, email, password, phone } = req.body;
+    if (!name || !email || !password || !phone) {
+      res.status(400).json({ message: 'All fields are required including phone number' });
       return;
     }
     
@@ -33,7 +33,7 @@ export const registerUser = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, password: hashedPassword });
+    const user = await User.create({ name, email, password: hashedPassword, phone });
 
     const token = generateToken(user._id.toString(), 'user');
     setTokenCookie(res, token);

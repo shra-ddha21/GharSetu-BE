@@ -115,8 +115,11 @@ export const reactivateProvider = async (req, res) => {
 
 export const getAllRequests = async (req, res) => {
   try {
-    const requests = await RequestModel.find()
-      .populate('userId', 'name email')
+    const status = req.query.status;
+    const filter = status ? { status } : {};
+    
+    const requests = await RequestModel.find(filter)
+      .populate('userId', 'name email phone address')
       .populate('selectedProviders', 'businessName ownerName email phone location serviceType')
       .populate('assignedProviderId', 'businessName ownerName email phone location serviceType')
       .sort({ createdAt: -1 });
